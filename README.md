@@ -1,6 +1,6 @@
 # xen-claimer
 
-Following tool created n amount of accounts, funds them with ETH by using FUNDING_WALLET and claims XEN. At the end of execution you will have wallet.json file with the following format
+Following tool creates n amount of accounts, funds them with ETH by using FUNDING_WALLET and claims XEN. At the end of execution you will have wallet.json file with the following format
 
 ```json
 [
@@ -17,8 +17,10 @@ Following tool created n amount of accounts, funds them with ETH by using FUNDIN
 
 Before usig it, you need to have 2 environment variable set, for example by creating .env file in the same folder where you will execute the tool from with following data
 
+```
 ETH_RPC=ETH_RPC_URL
 FUNDING_WALLET=FUNDING_WALLET_PRIVATE_KEY
+```
 
 ## Options
 
