@@ -19,14 +19,14 @@ func (xen *XenClaimer) fundAccounts() {
 		if !a.Funded && !a.Claimed {
 			hash, err := xen.TransferEth(xen.fundingKey, a.Address, convertTransferAmount)
 			if err != nil {
-				fmt.Println("\n" + fmt.Sprintf("::ERROR %s error: %s", a.Address, err.Error()))
+				fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 				continue
 			}
-			fmt.Println("\n" + fmt.Sprintf("::INFO %s funding request was submitted", a.Address))
+			fmt.Println(fmt.Sprintf("\n::INFO %s funding request was submitted", a.Address))
 			for {
 				status, err := xen.checkTxHashStatus(hash)
 				if status == 0 {
-					fmt.Println("\n" + fmt.Sprintf("::ERROR %s error: %s", a.Address, err.Error()))
+					fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 					break
 				}
 				if status == 1 {
@@ -34,7 +34,7 @@ func (xen *XenClaimer) fundAccounts() {
 					mutex.Lock()
 					xen.saveAccountsState()
 					mutex.Unlock()
-					fmt.Println("\n" + fmt.Sprintf("::INFO %s funding request was completed", a.Address))
+					fmt.Println(fmt.Sprintf("\n::INFO %s funding request was completed", a.Address))
 					break
 				}
 				time.Sleep(2 * time.Second)

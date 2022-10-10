@@ -20,14 +20,14 @@ func (xen *XenClaimer) initiateClaiming() {
 				concurrentGoroutines <- struct{}{}
 				hash, err := xen.claimer(a)
 				if err != nil {
-					fmt.Println("\n" + fmt.Sprintf("::ERROR CLAIM %s error: %s", a.Address, err.Error()))
+					fmt.Println(fmt.Sprintf("\n::ERROR CLAIM %s error: %s", a.Address, err.Error()))
 					return
 				}
-				fmt.Println("\n" + fmt.Sprintf("::INFO CLAIM %s claim request was submitted", a.Address))
+				fmt.Println(fmt.Sprintf("\n::INFO CLAIM %s claim request was submitted", a.Address))
 				for {
 					status, err := xen.checkTxHashStatus(hash)
 					if status == 0 {
-						fmt.Println("\n" + fmt.Sprintf("::ERROR CLAIM %s error: %s", a.Address, err.Error()))
+						fmt.Println(fmt.Sprintf("\n::ERROR CLAIM %s error: %s", a.Address, err.Error()))
 						break
 					}
 					if status == 1 {
@@ -35,7 +35,7 @@ func (xen *XenClaimer) initiateClaiming() {
 						mutex.Lock()
 						xen.saveAccountsState()
 						mutex.Unlock()
-						fmt.Println("\n" + fmt.Sprintf("::INFO CLAIM %s claim request was completed", a.Address))
+						fmt.Println(fmt.Sprintf("\n::INFO CLAIM %s claim request was completed", a.Address))
 						break
 					}
 					time.Sleep(2 * time.Second)

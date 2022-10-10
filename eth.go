@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 
@@ -84,24 +83,24 @@ func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int)
 	return signedTx.Hash().Hex(), err
 }
 
-func (x *XenClaimer) getBalance() *big.Float {
+func (x *XenClaimer) getBalance() (*big.Float, error) {
 	privateKey, err := crypto.HexToECDSA(x.fundingKey)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Fatalln("Error")
+		return nil, fmt.Errorf("Bad private key")
 	}
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
 	balance, err := x.client.BalanceAt(context.Background(), fromAddress, nil)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	humanBalance := new(big.Float).Quo(new(big.Float).SetInt(balance), big.NewFloat(math.Pow10(18)))
-	return humanBalance
+	return humanBalance, nil
 }

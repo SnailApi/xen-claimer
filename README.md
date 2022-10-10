@@ -1,6 +1,8 @@
 # xen-claimer
 
-Following tool creates n amount of accounts, funds them with ETH by using FUNDING_WALLET and claims XEN. At the end of execution you will have wallet.json file with the following format
+Claimer for https://xen.network/mainnet
+
+Following tool creates n amount of accounts, funds them with ETH by using FUNDING_WALLET and claims XEN. At the end of execution you will have wallet.json file with the following format:
 
 ```json
 [

@@ -70,14 +70,14 @@ func (xen *XenClaimer) withdrawToFundingKey() {
 
 				hash, err := xen.TransferEth(a.PrivateKey, address.String(), big.NewInt(0))
 				if err != nil {
-					fmt.Println("\n" + fmt.Sprintf("::ERROR %s error: %s", a.Address, err.Error()))
+					fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 					return
 				}
-				fmt.Println("\n" + fmt.Sprintf("::INFO %s withdraw request submitted", a.Address))
+				fmt.Println(fmt.Sprintf("\n::INFO %s withdraw request submitted", a.Address))
 				for {
 					status, err := xen.checkTxHashStatus(hash)
 					if status == 0 {
-						fmt.Println("\n" + fmt.Sprintf("::ERROR %s error: %s", a.Address, err.Error()))
+						fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 						break
 					}
 					if status == 1 {
@@ -85,7 +85,7 @@ func (xen *XenClaimer) withdrawToFundingKey() {
 						mutex.Lock()
 						xen.saveAccountsState()
 						mutex.Unlock()
-						fmt.Println("\n" + fmt.Sprintf("::INFO %s withdraw request completed", a.Address))
+						fmt.Println(fmt.Sprintf("\n::INFO %s withdraw request completed", a.Address))
 						break
 					}
 					time.Sleep(2 * time.Second)

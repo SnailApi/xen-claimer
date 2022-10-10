@@ -50,9 +50,21 @@ func main() {
 	flag.Parse()
 	godotenv.Load()
 
-	client, err := ethclient.Dial(os.Getenv("ETH_RPC"))
+	ethRpcUrl := os.Getenv("ETH_RPC")
+	if ethRpcUrl == "" {
+		fmt.Println("\n::ERROR Missing EHT_RPC environment variable\n")
+		return
+	}
+	fundingWallet := os.Getenv("FUNDING_WALLET")
+	if ethRpcUrl == "" {
+		fmt.Println("\n::ERROR Missing FUNDING_WALLET environment variable\n")
+		return
+	}
+
+	client, err := ethclient.Dial(ethRpcUrl)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(fmt.Sprintf("\n::ERROR %s\n", err))
+		return
 	}
 
 	// Create Xen instance
@@ -64,7 +76,7 @@ func main() {
 	xen := XenClaimer{
 		_XEN:             _XEN,
 		stakeDays:        *stakeForDays,
-		fundingKey:       os.Getenv("FUNDING_WALLET"),
+		fundingKey:       fundingWallet,
 		toFundEachWallet: *toFundEachWallet,
 		client:           client,
 		accountsToCreate: *accountsToCreat,
@@ -86,17 +98,21 @@ func main() {
 		// Create new list of accounts if file with wallets doesn't exist
 		if len(xen.accounts) == 0 {
 			xen.generateAccounts()
-			fmt.Println("\n" + fmt.Sprintf("::INFO %d accounts were created", len(xen.accounts)))
+			fmt.Println(fmt.Sprintf("\n::INFO %d accounts were created", len(xen.accounts)))
 		} else {
-			fmt.Println("\n" + fmt.Sprintf("::INFO found %d accounts in provided file", len(xen.accounts)))
+			fmt.Println(fmt.Sprintf("\n::INFO found %d accounts in provided file", len(xen.accounts)))
 		}
 
 		// Get funding account balance
-		fundingAccountBalance := xen.getBalance()
+		fundingAccountBalance, err := xen.getBalance()
+		if err != nil {
+			fmt.Println(fmt.Sprintf("\n::ERROR %s\n", err))
+			return
+		}
 
-		fmt.Println("\n" + fmt.Sprintf("::INFO funding account balance %f", fundingAccountBalance))
+		fmt.Println(fmt.Sprintf("\n::INFO funding account balance %f", fundingAccountBalance))
 
-		fmt.Println("\n" + fmt.Sprintf("::INFO amount to transfer on each wallet %f", xen.toFundEachWallet))
+		fmt.Println(fmt.Sprintf("\n::INFO amount to transfer to each wallet %f", xen.toFundEachWallet))
 
 		// Fund accounts by using funding key
 		xen.fundAccounts()
