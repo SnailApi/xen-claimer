@@ -3,3 +3,4 @@ wallets.json
 .env
 dist/
 .goreleaser.yaml
+xen-claimer
