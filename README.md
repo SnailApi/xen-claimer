@@ -24,6 +24,7 @@ FUNDING_WALLET=FUNDING_WALLET_PRIVATE_KEY
 
 ## Options
 
+```
 -a          Number of accounts to create (default 2)
 -c          Concurency (default 3)
 -d          Set number of days to stakes (default 100)
@@ -31,6 +32,7 @@ FUNDING_WALLET=FUNDING_WALLET_PRIVATE_KEY
 -fund       Create, fund accounts and initiate claim
 -withdraw   Withdraw funds from all acounts back to funding key
 -wl         Path to wallets list. Format per string(privateKey publicKey) (default "wallets.json")
+```
 
 ## Example
 
