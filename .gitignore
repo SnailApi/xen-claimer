@@ -1,3 +1,5 @@
 bp
 wallets.json
 .env
+dist/
+.goreleaser.yaml
