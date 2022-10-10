@@ -71,7 +71,7 @@ func (x *XenClaimer) claimer(account *Account) (string, error) {
 	auth.GasPrice = gasPrice
 	auth.GasLimit = 200000
 
-	term := big.NewInt(93)
+	term := big.NewInt(int64(x.stakeDays))
 	tx, err := x._XEN.ClaimRank(auth, term)
 	if err != nil {
 		return "", err

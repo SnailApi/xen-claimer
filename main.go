@@ -22,6 +22,7 @@ type Account struct {
 
 type XenClaimer struct {
 	_XEN             *xen_abi.Store
+	stakeDays        int
 	fundingKey       string
 	toFundEachWallet float64
 	client           *ethclient.Client
@@ -40,6 +41,7 @@ const _XEN_contract = "0x06450dee7fd2fb8e39061434babcfc05599a6fb8"
 func main() {
 	accountsToCreat := flag.Int("a", 2, "Number of accounts to create")
 	concurrency := flag.Int("c", 3, "Concurency")
+	stakeForDays := flag.Int("d", 100, "Set number of days to stakes")
 	walletListPath := flag.String("wl", "wallets.json", "Path to wallets list. Format per string(privateKey publicKey)")
 	toFundEachWallet := flag.Float64("f", 0.01, "To fund each wallet")
 	toDo := flag.Bool("fund", false, "Create, fund accounts and initiate claim")
@@ -61,6 +63,7 @@ func main() {
 
 	xen := XenClaimer{
 		_XEN:             _XEN,
+		stakeDays:        *stakeForDays,
 		fundingKey:       os.Getenv("FUNDING_WALLET"),
 		toFundEachWallet: *toFundEachWallet,
 		client:           client,
