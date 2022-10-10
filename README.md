@@ -37,6 +37,7 @@ FUNDING_WALLET=FUNDING_WALLET_PRIVATE_KEY
 ## Example
 
 Create 100 wallets, fund each with 0.01 ETH from FUNDING_KEY_WALLET, claim XEN with the duration 32 days and set concurency to 10
+
 ```
-xen-claimer -a 100 -c 10 -d 32 -f 0.01
+xen-claimer -fund -a 100 -c 10 -d 32 -f 0.01
 ```
