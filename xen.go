@@ -38,7 +38,7 @@ func (xen *XenClaimer) initiateClaiming() {
 						fmt.Println(fmt.Sprintf("\n::INFO CLAIM %s claim request was completed", a.Address))
 						break
 					}
-					time.Sleep(2 * time.Second)
+					time.Sleep(1 * time.Second)
 				}
 				<-concurrentGoroutines
 			}(a)
@@ -64,7 +64,7 @@ func (x *XenClaimer) claimer(account *Account) (string, error) {
 	gasPrice = new(big.Int).Add(gasPrice, new(big.Int).Div(gasPrice, big.NewInt(5)))
 
 	// Create an authorized transactor and spend 1 unicorn
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1))
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(int64(x.chainId)))
 	if err != nil {
 		return "", err
 	}

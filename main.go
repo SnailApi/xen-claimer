@@ -22,6 +22,7 @@ type Account struct {
 
 type XenClaimer struct {
 	_XEN             *xen_abi.Store
+	chainId          int
 	stakeDays        int
 	fundingKey       string
 	toFundEachWallet float64
@@ -32,11 +33,29 @@ type XenClaimer struct {
 	walletListPath   string
 }
 
+type ChainData struct {
+	RpcUrl  string
+	ChainId int
+}
+
 var wg sync.WaitGroup
 
 var mutex = &sync.Mutex{}
 
-const _XEN_contract = "0x06450dee7fd2fb8e39061434babcfc05599a6fb8"
+const _XEN_contract = "0x2AB0e9e4eE70FFf1fB9D67031E44F6410170d00e"
+
+func getRpcUrl(chain string) ChainData {
+	if chain == "bsc" {
+		return ChainData{
+			RpcUrl:  os.Getenv("BSC_RPC"),
+			ChainId: 56,
+		}
+	}
+	return ChainData{
+		RpcUrl:  os.Getenv("ETH_RPC"),
+		ChainId: 1,
+	}
+}
 
 func main() {
 	accountsToCreat := flag.Int("a", 2, "Number of accounts to create")
@@ -45,23 +64,25 @@ func main() {
 	walletListPath := flag.String("wl", "wallets.json", "Path to wallets list. Format per string(privateKey publicKey)")
 	toFundEachWallet := flag.Float64("f", 0.01, "To fund each wallet")
 	toDo := flag.Bool("fund", false, "Create, fund accounts and initiate claim")
+	chain := flag.String("chain", "eth", "Select chain: eth or bsc")
 	withdrawToFundingKey := flag.Bool("withdraw", false, "Withdraw funds from all acounts back to funding key")
 
 	flag.Parse()
 	godotenv.Load()
 
-	ethRpcUrl := os.Getenv("ETH_RPC")
-	if ethRpcUrl == "" {
+	chainInfo := getRpcUrl(*chain)
+	rpcUrl := chainInfo.RpcUrl
+	if rpcUrl == "" {
 		fmt.Println("\n::ERROR Missing EHT_RPC environment variable\n")
 		return
 	}
 	fundingWallet := os.Getenv("FUNDING_WALLET")
-	if ethRpcUrl == "" {
+	if rpcUrl == "" {
 		fmt.Println("\n::ERROR Missing FUNDING_WALLET environment variable\n")
 		return
 	}
 
-	client, err := ethclient.Dial(ethRpcUrl)
+	client, err := ethclient.Dial(rpcUrl)
 	if err != nil {
 		fmt.Println(fmt.Sprintf("\n::ERROR %s\n", err))
 		return
@@ -75,6 +96,7 @@ func main() {
 
 	xen := XenClaimer{
 		_XEN:             _XEN,
+		chainId:          chainInfo.ChainId,
 		stakeDays:        *stakeForDays,
 		fundingKey:       fundingWallet,
 		toFundEachWallet: *toFundEachWallet,

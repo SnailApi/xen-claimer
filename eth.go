@@ -57,7 +57,7 @@ func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int)
 			return "", err
 		}
 
-		price := new(big.Int).Mul(gasPrice, big.NewInt(30000))
+		price := new(big.Int).Mul(gasPrice, big.NewInt(21000))
 
 		amount = new(big.Int).Sub(balance, price)
 		if err != nil {
@@ -66,11 +66,11 @@ func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int)
 		}
 	}
 
-	gasLimit := uint64(30000)
+	gasLimit := uint64(21000)
 	var data []byte
 	tx := types.NewTransaction(nonce, common.HexToAddress(toAddress), amount, gasLimit, gasPrice, data)
 
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(1)), privateKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(int64(x.chainId))), privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -81,6 +81,27 @@ func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int)
 	}
 
 	return signedTx.Hash().Hex(), err
+}
+
+func (x *XenClaimer) getNonce() (uint64, error) {
+	privateKey, err := crypto.HexToECDSA(x.fundingKey)
+	if err != nil {
+		return 0, fmt.Errorf("BAD 1 Wallet: %s error: %s \n", x.fundingKey, err.Error())
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return 0, fmt.Errorf("error casting public key to ECDSA")
+	}
+
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	nonce, err := x.client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		return 0, err
+	}
+
+	return nonce, nil
 }
 
 func (x *XenClaimer) getBalance() (*big.Float, error) {

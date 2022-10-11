@@ -21,6 +21,7 @@ Before usig it, you need to have 2 environment variable set, for example by crea
 
 ```
 ETH_RPC=ETH_RPC_URL
+BSC_RPC=BSC_RPC_URL
 FUNDING_WALLET=FUNDING_WALLET_PRIVATE_KEY
 ```
 
