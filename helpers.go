@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"sync/atomic"
 	"time"
 
 	xen_abi "github.com/drawrowfly/xen-claimer/xen_abi"
@@ -17,15 +18,21 @@ import (
 )
 
 type Account struct {
-	PrivateKey string `json:"private_key"`
-	Address    string `json:"address"`
-	Funded     bool   `json:"funded"`
-	Claimed    bool   `json:"claimed"`
+	PrivateKey      string `json:"private_key"`
+	Address         string `json:"address"`
+	Funded          bool   `json:"funded"`
+	Claimed         bool   `json:"claimed"`
+	RewardClaimed   bool   `json:"reward_claimed"`
+	TokenTransfered bool   `json:"token_transfered"`
 }
 
+type Tasks struct {
+	completed       int64
+	notCompleted    int64
+	totalTransfered uint64
+}
 type XenClaimer struct {
 	_XEN               *xen_abi.Store
-	chainId            int
 	stakeDays          int
 	fundingKey         string
 	toFundEachWallet   float64
@@ -35,28 +42,49 @@ type XenClaimer struct {
 	concurrencyFunding int
 	accounts           []*Account
 	walletListPath     string
+	transferXenTo      common.Address
+	chain              ChainData
+	tasks              Tasks
 }
 
 type ChainData struct {
-	RpcUrl      string
-	ChainId     int
-	XenContract string
+	RpcUrl          string
+	ChainId         int
+	ChainName       string
+	XenContract     string
+	GasLimitDefault int
+}
+
+type _XEN_UserMints struct {
+	User       common.Address
+	Term       *big.Int
+	MaturityTs *big.Int
+	Rank       *big.Int
+	Amplifier  *big.Int
+	EaaRate    *big.Int
 }
 
 // Ger RPC url, chain id and contract address
-func getRpcUrl(chain string) ChainData {
-	if chain == "bsc" {
+func getChainHelperData(chainId int) ChainData {
+	if chainId == 56 {
 		return ChainData{
-			RpcUrl:      os.Getenv("BSC_RPC"),
-			ChainId:     56,
-			XenContract: "0x2AB0e9e4eE70FFf1fB9D67031E44F6410170d00e",
+			ChainId:         chainId,
+			XenContract:     "0x2AB0e9e4eE70FFf1fB9D67031E44F6410170d00e",
+			GasLimitDefault: 30000,
+			ChainName:       "BSC",
 		}
 	}
-	return ChainData{
-		RpcUrl:      os.Getenv("ETH_RPC"),
-		ChainId:     1,
-		XenContract: "0x06450dee7fd2fb8e39061434babcfc05599a6fb8",
+	if chainId == 1 {
+		return ChainData{
+			ChainId:         chainId,
+			XenContract:     "0x06450dee7fd2fb8e39061434babcfc05599a6fb8",
+			GasLimitDefault: 150000,
+			ChainName:       "ETH",
+		}
 	}
+
+	return ChainData{}
+
 }
 
 // Get address from private key
@@ -119,6 +147,7 @@ func (xen *XenClaimer) withdrawToFundingKey() {
 
 				hash, err := xen.TransferEth(a.PrivateKey, address.String(), big.NewInt(0), false, uint64(0))
 				if err != nil {
+					atomic.AddInt64(&xen.tasks.notCompleted, 1)
 					fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 					return
 				}
@@ -126,6 +155,7 @@ func (xen *XenClaimer) withdrawToFundingKey() {
 				for {
 					status, err := xen.checkTxHashStatus(hash)
 					if status == 0 {
+						atomic.AddInt64(&xen.tasks.notCompleted, 1)
 						fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 						break
 					}
@@ -134,6 +164,7 @@ func (xen *XenClaimer) withdrawToFundingKey() {
 						mutex.Lock()
 						xen.saveAccountsState()
 						mutex.Unlock()
+						atomic.AddInt64(&xen.tasks.completed, 1)
 						fmt.Println(fmt.Sprintf("\n::INFO %s withdraw request completed", a.Address))
 						break
 					}

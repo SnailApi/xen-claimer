@@ -32,6 +32,7 @@ func (xen *XenClaimer) fundAccounts() {
 				atomic.AddUint64(&nonce, 1)
 				hash, err := xen.TransferEth(xen.fundingKey, a.Address, convertTransferAmount, true, nonce)
 				if err != nil {
+					atomic.AddInt64(&xen.tasks.notCompleted, 1)
 					fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 					return
 				}
@@ -39,6 +40,7 @@ func (xen *XenClaimer) fundAccounts() {
 				for {
 					status, err := xen.checkTxHashStatus(hash)
 					if status == 0 {
+						atomic.AddInt64(&xen.tasks.notCompleted, 1)
 						fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 						break
 					}
@@ -76,10 +78,12 @@ func (x *XenClaimer) generateAccounts() {
 		privateKey := hex.EncodeToString(key.D.Bytes())
 
 		x.accounts = append(x.accounts, &Account{
-			PrivateKey: privateKey,
-			Address:    address,
-			Funded:     false,
-			Claimed:    false,
+			PrivateKey:      privateKey,
+			Address:         address,
+			Funded:          false,
+			Claimed:         false,
+			RewardClaimed:   false,
+			TokenTransfered: false,
 		})
 	}
 

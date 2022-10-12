@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -24,30 +25,48 @@ func main() {
 	stakeForDays := flag.Int("d", 100, "Set number of days to stakes")
 	walletListPath := flag.String("wl", "wallets.json", "Path to wallets list. Format per string(privateKey publicKey)")
 	toFundEachWallet := flag.Float64("f", 0.01, "To fund each wallet")
-	toDo := flag.Bool("fund", false, "Create, fund accounts and initiate claim")
-	chain := flag.String("chain", "eth", "Select chain: eth or bsc")
+	transferXenTo := flag.String("transfer-to", "", "Transfer claimed xen to the address")
+	userFpcUrl := flag.String("rpc", "", "HTTP RPC url")
+	userFundingWallet := flag.String("fw", "", "Private key for wallet that will be used to fund newly created wallets")
+	// Main actions
+	fundAndStakeXen := flag.Bool("fund", false, "Create, fund accounts and initiate XEN claim")
+	claimAndTransferXen := flag.Bool("claim", false, "Claim XEN reward")
 	withdrawToFundingKey := flag.Bool("withdraw", false, "Withdraw funds from all acounts back to funding key")
+	claimDetails := flag.Bool("cd", false, "Get wallet claimed details, such as terms of claiming and etc")
 
 	flag.Parse()
 	godotenv.Load()
 
-	chainInfo := getRpcUrl(*chain)
-	rpcUrl := chainInfo.RpcUrl
-	if rpcUrl == "" {
-		fmt.Println("\n::ERROR Missing EHT_RPC environment variable\n")
+	rpc := os.Getenv("RPC")
+	if rpc == "" {
+		rpc = *userFpcUrl
+	}
+	if rpc == "" {
+		fmt.Println("\n::ERROR Missing RPC environment variable\n")
 		return
 	}
+
 	fundingWallet := os.Getenv("FUNDING_WALLET")
-	if rpcUrl == "" {
+	if fundingWallet == "" {
+		fundingWallet = *userFundingWallet
+	}
+	if fundingWallet == "" {
 		fmt.Println("\n::ERROR Missing FUNDING_WALLET environment variable\n")
 		return
 	}
 
-	client, err := ethclient.Dial(rpcUrl)
+	client, err := ethclient.Dial(rpc)
 	if err != nil {
 		fmt.Println(fmt.Sprintf("\n::ERROR %s\n", err))
 		return
 	}
+
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		fmt.Println(fmt.Sprintf("\n::ERROR %s\n", err))
+		return
+	}
+	chainInfo := getChainHelperData(int(chainId.Int64()))
 
 	// Create Xen instance
 	_XEN, err := xen_abi.NewStore(common.HexToAddress(chainInfo.XenContract), client)
@@ -57,7 +76,6 @@ func main() {
 
 	xen := XenClaimer{
 		_XEN:               _XEN,
-		chainId:            chainInfo.ChainId,
 		stakeDays:          *stakeForDays,
 		fundingKey:         fundingWallet,
 		toFundEachWallet:   *toFundEachWallet,
@@ -67,18 +85,38 @@ func main() {
 		concurrencyFunding: *concurrencyFunding,
 		accounts:           make([]*Account, 0),
 		walletListPath:     *walletListPath,
+		transferXenTo:      common.HexToAddress(*transferXenTo),
+		chain:              chainInfo,
+		tasks: Tasks{
+			completed:       0,
+			notCompleted:    0,
+			totalTransfered: uint64(0),
+		},
 	}
+
+	fmt.Println(fmt.Sprintf("\n::XEN CLAIMER START :: CHAIN %s :: CHAIN ID %d\n", chainInfo.ChainName, chainInfo.ChainId))
 
 	// Check if file with wallets exist
 	xen.loadExistingAccounts()
 
-	// Withdraw funds from all accounts back to fundingKey
-	if *withdrawToFundingKey {
-		xen.withdrawToFundingKey()
+	// Start main actions
+
+	if *claimDetails {
+		xen.getXenWalletClaimingDetails()
+
+		fmt.Println(fmt.Sprintf("\n::XEN CLAIMER COMPLETED claim details task was completed :: COMPLETED: %d  NOT COMPLETED: %d \n", xen.tasks.completed, xen.tasks.notCompleted))
 		return
 	}
 
-	if *toDo {
+	// Withdraw funds from all accounts back to fundingKey
+	if *withdrawToFundingKey {
+		xen.withdrawToFundingKey()
+
+		fmt.Println(fmt.Sprintf("\n::XEN CLAIMER COMPLETED withdraw all funds back to funding wallet was completed :: COMPLETED: %d  NOT COMPLETED: %d \n", xen.tasks.completed, xen.tasks.notCompleted))
+		return
+	}
+
+	if *fundAndStakeXen {
 		// Create new list of accounts if file with wallets doesn't exist
 		if len(xen.accounts) == 0 {
 			xen.generateAccounts()
@@ -101,9 +139,23 @@ func main() {
 		// Fund accounts by using funding key
 		xen.fundAccounts()
 
-		// Initiate claiming for accounts with funds
-		xen.initiateClaiming()
+		// Initiate XEN claiming for accounts with funds
+		xen.initiateXenClaiming()
 
+		fmt.Println(fmt.Sprintf("\n::XEN CLAIMER COMPLETED fund and claim task was completed :: COMPLETED: %d  NOT COMPLETED: %d \n", xen.tasks.completed, xen.tasks.notCompleted))
+		return
+	}
+
+	if *claimAndTransferXen {
+
+		if *transferXenTo == "" {
+			fmt.Println("\n::ERROR Missing transfer-to wallet address\n")
+		}
+		// Initiate XEN reward claiming
+		xen.initiateXenRewardClaiming()
+		xen.initiateXenTransferToWallet()
+
+		fmt.Println(fmt.Sprintf("\n::XEN CLAIMER COMPLETED claim and transfer task was completed :: COMPLETED: %d :: NOT COMPLETED: %d :: TRANSFERED :: %d \n", xen.tasks.completed, xen.tasks.notCompleted, xen.tasks.totalTransfered))
 		return
 	}
 

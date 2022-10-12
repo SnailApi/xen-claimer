@@ -59,7 +59,7 @@ func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int,
 			return "", err
 		}
 
-		price := new(big.Int).Mul(gasPrice, big.NewInt(21000))
+		price := new(big.Int).Mul(gasPrice, big.NewInt(int64(x.chain.GasLimitDefault)))
 
 		amount = new(big.Int).Sub(balance, price)
 		if err != nil {
@@ -68,11 +68,11 @@ func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int,
 		}
 	}
 
-	gasLimit := uint64(21000)
+	gasLimit := uint64(x.chain.GasLimitDefault)
 	var data []byte
 	tx := types.NewTransaction(nonce, common.HexToAddress(toAddress), amount, gasLimit, gasPrice, data)
 
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(int64(x.chainId))), privateKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(int64(x.chain.ChainId))), privateKey)
 	if err != nil {
 		return "", err
 	}
