@@ -29,18 +29,20 @@ FUNDING_WALLET=FUNDING_WALLET_PRIVATE_KEY
 
 ```
 -a          Number of accounts to create (default 2)
--c          Concurency (default 3)
+-c          Concurency to claim XEN (default 10)
+-cw         Concurency to fund wallets (default 10)
+-chain      Select chain to work with: eth or bsc (default "eth")
 -d          Set number of days to stakes (default 100)
 -f          To fund each wallet (default 0.01)
 -fund       Create, fund accounts and initiate claim
 -withdraw   Withdraw funds from all acounts back to funding key
--wl         Path to wallets list. Format per string(privateKey publicKey) (default "wallets.json")
+-wl         Path to wallets list (default "wallets.json")
 ```
 
 ## Example
 
-Create 100 wallets, fund each with 0.01 ETH from FUNDING_KEY_WALLET, claim XEN with the duration 32 days and set concurency to 10
+Create 100 wallets, fund each with 0.01 ETH from FUNDING_KEY_WALLET with concurrency set to 5, claim XEN with the duration 32 days with set concurency to 10
 
 ```
-xen-claimer -fund -a 100 -c 10 -d 32 -f 0.01
+xen-claimer -fund -a 100 -c 10 -cw 5 -d 2 -f 0.01 -chain eth
 ```

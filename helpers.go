@@ -10,10 +10,56 @@ import (
 	"os"
 	"time"
 
+	xen_abi "github.com/drawrowfly/xen-claimer/xen_abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+type Account struct {
+	PrivateKey string `json:"private_key"`
+	Address    string `json:"address"`
+	Funded     bool   `json:"funded"`
+	Claimed    bool   `json:"claimed"`
+}
+
+type XenClaimer struct {
+	_XEN               *xen_abi.Store
+	chainId            int
+	stakeDays          int
+	fundingKey         string
+	toFundEachWallet   float64
+	client             *ethclient.Client
+	accountsToCreate   int
+	concurrency        int
+	concurrencyFunding int
+	accounts           []*Account
+	walletListPath     string
+}
+
+type ChainData struct {
+	RpcUrl      string
+	ChainId     int
+	XenContract string
+}
+
+// Ger RPC url, chain id and contract address
+func getRpcUrl(chain string) ChainData {
+	if chain == "bsc" {
+		return ChainData{
+			RpcUrl:      os.Getenv("BSC_RPC"),
+			ChainId:     56,
+			XenContract: "0x2AB0e9e4eE70FFf1fB9D67031E44F6410170d00e",
+		}
+	}
+	return ChainData{
+		RpcUrl:      os.Getenv("ETH_RPC"),
+		ChainId:     1,
+		XenContract: "0x06450dee7fd2fb8e39061434babcfc05599a6fb8",
+	}
+}
+
+// Get address from private key
 func (xen *XenClaimer) getAddressFromPKey(pKey string) (common.Address, error) {
 	privateKey, err := crypto.HexToECDSA(pKey)
 	if err != nil {
@@ -31,6 +77,7 @@ func (xen *XenClaimer) getAddressFromPKey(pKey string) (common.Address, error) {
 	return fromAddress, nil
 }
 
+// Preload existing accounts from file set by using -wl option
 func (x *XenClaimer) loadExistingAccounts() {
 	f, err := os.ReadFile(x.walletListPath)
 	if err != nil {
@@ -43,6 +90,7 @@ func (x *XenClaimer) loadExistingAccounts() {
 	}
 }
 
+// Save account state in file set by using -wl option
 func (x *XenClaimer) saveAccountsState() {
 	content, err := json.Marshal(x.accounts)
 	if err != nil {
@@ -54,6 +102,7 @@ func (x *XenClaimer) saveAccountsState() {
 	}
 }
 
+// Withdraw funds from all accounts back to funding key
 func (xen *XenClaimer) withdrawToFundingKey() {
 	address, err := xen.getAddressFromPKey(xen.fundingKey)
 	if err != nil {
@@ -68,7 +117,7 @@ func (xen *XenClaimer) withdrawToFundingKey() {
 				defer wg.Done()
 				concurrentGoroutines <- struct{}{}
 
-				hash, err := xen.TransferEth(a.PrivateKey, address.String(), big.NewInt(0))
+				hash, err := xen.TransferEth(a.PrivateKey, address.String(), big.NewInt(0), false, uint64(0))
 				if err != nil {
 					fmt.Println(fmt.Sprintf("\n::ERROR %s error: %s", a.Address, err.Error()))
 					return

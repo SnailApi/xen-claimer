@@ -13,53 +13,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type Account struct {
-	PrivateKey string `json:"private_key"`
-	Address    string `json:"address"`
-	Funded     bool   `json:"funded"`
-	Claimed    bool   `json:"claimed"`
-}
-
-type XenClaimer struct {
-	_XEN             *xen_abi.Store
-	chainId          int
-	stakeDays        int
-	fundingKey       string
-	toFundEachWallet float64
-	client           *ethclient.Client
-	accountsToCreate int
-	concurrency      int
-	accounts         []*Account
-	walletListPath   string
-}
-
-type ChainData struct {
-	RpcUrl  string
-	ChainId int
-}
-
 var wg sync.WaitGroup
 
 var mutex = &sync.Mutex{}
 
-const _XEN_contract = "0x2AB0e9e4eE70FFf1fB9D67031E44F6410170d00e"
-
-func getRpcUrl(chain string) ChainData {
-	if chain == "bsc" {
-		return ChainData{
-			RpcUrl:  os.Getenv("BSC_RPC"),
-			ChainId: 56,
-		}
-	}
-	return ChainData{
-		RpcUrl:  os.Getenv("ETH_RPC"),
-		ChainId: 1,
-	}
-}
-
 func main() {
 	accountsToCreat := flag.Int("a", 2, "Number of accounts to create")
-	concurrency := flag.Int("c", 3, "Concurency")
+	concurrencyFunding := flag.Int("cw", 10, "Concurency to fund wallets")
+	concurrency := flag.Int("c", 10, "Concurency to claim XEN")
 	stakeForDays := flag.Int("d", 100, "Set number of days to stakes")
 	walletListPath := flag.String("wl", "wallets.json", "Path to wallets list. Format per string(privateKey publicKey)")
 	toFundEachWallet := flag.Float64("f", 0.01, "To fund each wallet")
@@ -89,22 +50,23 @@ func main() {
 	}
 
 	// Create Xen instance
-	_XEN, err := xen_abi.NewStore(common.HexToAddress(_XEN_contract), client)
+	_XEN, err := xen_abi.NewStore(common.HexToAddress(chainInfo.XenContract), client)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	xen := XenClaimer{
-		_XEN:             _XEN,
-		chainId:          chainInfo.ChainId,
-		stakeDays:        *stakeForDays,
-		fundingKey:       fundingWallet,
-		toFundEachWallet: *toFundEachWallet,
-		client:           client,
-		accountsToCreate: *accountsToCreat,
-		concurrency:      *concurrency,
-		accounts:         make([]*Account, 0),
-		walletListPath:   *walletListPath,
+		_XEN:               _XEN,
+		chainId:            chainInfo.ChainId,
+		stakeDays:          *stakeForDays,
+		fundingKey:         fundingWallet,
+		toFundEachWallet:   *toFundEachWallet,
+		client:             client,
+		accountsToCreate:   *accountsToCreat,
+		concurrency:        *concurrency,
+		concurrencyFunding: *concurrencyFunding,
+		accounts:           make([]*Account, 0),
+		walletListPath:     *walletListPath,
 	}
 
 	// Check if file with wallets exist

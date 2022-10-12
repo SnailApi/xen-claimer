@@ -25,7 +25,7 @@ func (x *XenClaimer) checkTxHashStatus(txHash string) (int, error) {
 	return 1, fmt.Errorf("Transaction Completed")
 }
 
-func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int) (string, error) {
+func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int, concurrent bool, nonce uint64) (string, error) {
 	privateKey, err := crypto.HexToECDSA(pKey)
 	if err != nil {
 		return "", fmt.Errorf("BAD 1 Wallet: %s error: %s \n", pKey, err.Error())
@@ -38,10 +38,12 @@ func (x *XenClaimer) TransferEth(pKey string, toAddress string, amount *big.Int)
 	}
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := x.client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		fmt.Println(1)
-		return "", err
+	if !concurrent {
+		nonce, err = x.client.PendingNonceAt(context.Background(), fromAddress)
+		if err != nil {
+			fmt.Println(1)
+			return "", err
+		}
 	}
 
 	gasPrice, err := x.client.SuggestGasPrice(context.Background())
