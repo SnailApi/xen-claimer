@@ -76,7 +76,7 @@ func (x *XenClaimer) xenClaimer(account *Account) (string, error) {
 		return "", err
 	}
 	auth.GasPrice = gasPrice
-	auth.GasLimit = 200000
+	auth.GasLimit = 50000
 
 	term := big.NewInt(int64(x.stakeDays))
 	tx, err := x._XEN.ClaimRank(auth, term)
@@ -96,29 +96,43 @@ func (xen *XenClaimer) initiateXenRewardClaiming() {
 			go func(a *Account) {
 				defer wg.Done()
 				concurrentGoroutines <- struct{}{}
-				hash, err := xen.xenRewardClaimer(a)
+
+				claimDetails, err := xen.xenWalletClaimingDetails(a)
 				if err != nil {
 					atomic.AddInt64(&xen.tasks.notCompleted, 1)
-					fmt.Println(fmt.Sprintf("\n::ERROR REWARD CLAIM %s error: %s", a.Address, err.Error()))
+					fmt.Println(fmt.Sprintf("\n::ERROR DETAILS %s error: %s", a.Address, err.Error()))
 					return
 				}
-				fmt.Println(fmt.Sprintf("\n::INFO REWARD CLAIM %s claim request was submitted", a.Address))
-				for {
-					status, err := xen.checkTxHashStatus(hash)
-					if status == 0 {
+				ux := time.Now().Unix()
+				claimIn := new(big.Int).Sub(claimDetails.MaturityTs, big.NewInt(ux))
+
+				if claimIn.Cmp(big.NewInt(0)) <= 0 {
+					hash, err := xen.xenRewardClaimer(a)
+					if err != nil {
 						atomic.AddInt64(&xen.tasks.notCompleted, 1)
 						fmt.Println(fmt.Sprintf("\n::ERROR REWARD CLAIM %s error: %s", a.Address, err.Error()))
-						break
+						return
 					}
-					if status == 1 {
-						a.RewardClaimed = true
-						mutex.Lock()
-						xen.saveAccountsState()
-						mutex.Unlock()
-						fmt.Println(fmt.Sprintf("\n::INFO REWARD CLAIM %s claim request was completed", a.Address))
-						break
+					fmt.Println(fmt.Sprintf("\n::INFO REWARD CLAIM %s claim request was submitted", a.Address))
+					for {
+						status, err := xen.checkTxHashStatus(hash)
+						if status == 0 {
+							atomic.AddInt64(&xen.tasks.notCompleted, 1)
+							fmt.Println(fmt.Sprintf("\n::ERROR REWARD CLAIM %s error: %s", a.Address, err.Error()))
+							break
+						}
+						if status == 1 {
+							a.RewardClaimed = true
+							mutex.Lock()
+							xen.saveAccountsState()
+							mutex.Unlock()
+							fmt.Println(fmt.Sprintf("\n::INFO REWARD CLAIM %s claim request was completed", a.Address))
+							break
+						}
+						time.Sleep(1 * time.Second)
 					}
-					time.Sleep(1 * time.Second)
+				} else {
+					atomic.AddInt64(&xen.tasks.notCompleted, 1)
 				}
 				<-concurrentGoroutines
 			}(a)
@@ -174,8 +188,10 @@ func (xen *XenClaimer) getXenWalletClaimingDetails() {
 					fmt.Println(fmt.Sprintf("\n::ERROR DETAILS %s error: %s", a.Address, err.Error()))
 					return
 				}
+				ux := time.Now().Unix()
+				claimIn := new(big.Int).Sub(details.MaturityTs, big.NewInt(ux))
 				atomic.AddInt64(&xen.tasks.completed, 1)
-				fmt.Println(fmt.Sprintf("::INFO DETAILS: %s RANK: %d TERM: %d", details.User.String(), details.Rank.Int64(), details.Term.Int64()))
+				fmt.Println(fmt.Sprintf("::INFO DETAILS: %s RANK: %d TERM: %d CLAIM IN (S): %d", details.User.String(), details.Rank.Int64(), details.Term.Int64(), claimIn))
 				<-concurrentGoroutines
 			}(a)
 		}

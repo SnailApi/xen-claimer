@@ -1,5 +1,7 @@
 # xen-claimer
 
+Supports ETH, BSC and MATIC
+
 Claimer for https://xen.network/mainnet
 
 Following tool creates n amount of accounts, funds them with ETH by using FUNDING_WALLET and claims XEN. At the end of execution you will have wallet.json file with the following format:
@@ -30,7 +32,7 @@ Following tool creates n amount of accounts, funds them with ETH by using FUNDIN
 -fw         Private key for wallet that will be used to fund newly created wallets
 ```
 
-If you will set RPC for binance chain then the claimer will work with binance chain
+If you will set BSC RPC then the claimer will work with binance chain and same goes for ETH and MATIC
 
 ## Example
 

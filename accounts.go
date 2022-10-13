@@ -67,7 +67,7 @@ func (xen *XenClaimer) fundAccounts() {
 // Create N accounts and save them in wallets.json file
 func (x *XenClaimer) generateAccounts() {
 	//Store wallet details in file
-	f, err := os.OpenFile("wallets.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(x.walletListPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}

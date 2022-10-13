@@ -23,7 +23,7 @@ func main() {
 	concurrencyFunding := flag.Int("cw", 10, "Concurency to fund wallets")
 	concurrency := flag.Int("c", 10, "Concurency to claim XEN")
 	stakeForDays := flag.Int("d", 100, "Set number of days to stakes")
-	walletListPath := flag.String("wl", "wallets.json", "Path to wallets list. Format per string(privateKey publicKey)")
+	walletListPath := flag.String("wl", "wallets.json", "Path to wallets list")
 	toFundEachWallet := flag.Float64("f", 0.01, "To fund each wallet")
 	transferXenTo := flag.String("transfer-to", "", "Transfer claimed xen to the address")
 	userFpcUrl := flag.String("rpc", "", "HTTP RPC url")
@@ -50,9 +50,11 @@ func main() {
 	if fundingWallet == "" {
 		fundingWallet = *userFundingWallet
 	}
-	if fundingWallet == "" {
-		fmt.Println("\n::ERROR Missing FUNDING_WALLET environment variable\n")
-		return
+	if *fundAndStakeXen || *withdrawToFundingKey {
+		if fundingWallet == "" {
+			fmt.Println("\n::ERROR Missing FUNDING_WALLET environment variable\n")
+			return
+		}
 	}
 
 	client, err := ethclient.Dial(rpc)
@@ -66,6 +68,7 @@ func main() {
 		fmt.Println(fmt.Sprintf("\n::ERROR %s\n", err))
 		return
 	}
+
 	chainInfo := getChainHelperData(int(chainId.Int64()))
 
 	// Create Xen instance
@@ -101,6 +104,7 @@ func main() {
 
 	// Start main actions
 
+	// Get wallet claim details, crank, time and etc
 	if *claimDetails {
 		xen.getXenWalletClaimingDetails()
 
@@ -122,7 +126,21 @@ func main() {
 			xen.generateAccounts()
 			fmt.Println(fmt.Sprintf("\n::INFO %d accounts were created", len(xen.accounts)))
 		} else {
-			fmt.Println(fmt.Sprintf("\n::INFO found %d accounts in provided file", len(xen.accounts)))
+			completed := 0
+			for _, v := range xen.accounts {
+				if v.Claimed {
+					completed += 1
+				}
+			}
+			notCompleted := len(xen.accounts) - completed
+			if xen.accountsToCreate > notCompleted {
+				xen.accountsToCreate = xen.accountsToCreate - notCompleted
+				xen.generateAccounts()
+			} else {
+				xen.accountsToCreate = 0
+			}
+			//xen.accountsToCreate = xen.accountsToCreate - completed
+			fmt.Println(fmt.Sprintf("\n::INFO found %d accounts in provided file :: TO CREATE %d", len(xen.accounts), xen.accountsToCreate))
 		}
 
 		// Get funding account balance

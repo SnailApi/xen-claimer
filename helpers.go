@@ -78,8 +78,17 @@ func getChainHelperData(chainId int) ChainData {
 		return ChainData{
 			ChainId:         chainId,
 			XenContract:     "0x06450dee7fd2fb8e39061434babcfc05599a6fb8",
-			GasLimitDefault: 150000,
+			GasLimitDefault: 30000,
 			ChainName:       "ETH",
+		}
+	}
+
+	if chainId == 137 {
+		return ChainData{
+			ChainId:         chainId,
+			XenContract:     "0x2AB0e9e4eE70FFf1fB9D67031E44F6410170d00e",
+			GasLimitDefault: 50000,
+			ChainName:       "MATIC",
 		}
 	}
 
